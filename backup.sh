@@ -33,6 +33,12 @@ DATE="$(date +%d-%m-%Y)"
 TIME="$(date +%H-%M)"
 EXCLUDE="--exclude=$LOGFILE --exclude=$ERRORLOG"
 
+## Erweiterung für MySQL-Datenbanken ------------------------------------------#
+TARGET="/var/backups/mysql"
+IGNORE="phpmyadmin|mysql|information_schema|performance_schema|test"
+CONF=/etc/mysql/debian.cnf
+DBS="$(/usr/bin/mysql --defaults-extra-file=$CONF -Bse 'show databases' | /bin/grep -Ev $IGNORE)"
+
 
 #### Funktionen ------------------------------------------------------------####
 UMOUNT1_OK() {
@@ -139,6 +145,13 @@ if [ `find $BACKUP_DIR/ -type f | wc -l` -eq 15 ]; then # Pruefe die Anzahl
     umount $ROTATE_MOUNT
     UMOUNT1_OK
 fi
+
+## Erstelle Backup der MySQL-Datenbanken -------------------------------------##
+echo -en "Erstelle Backup der MySQL-Datenbanken\t"
+for DB in $DBS; do
+    /usr/bin/mysqldump --defaults-extra-file=$CONF --skip-extended-insert --skip-comments $DB > $TARGET/$DB.sql
+done
+EXEC_OK
 
 ## Erstelle Backup -----------------------------------------------------------##
 while true; do
